@@ -62,8 +62,9 @@ public class QuerydslBasicTest {
                 .fetchOne();
         assertThat(findMember.getUsername()).isEqualTo("member1");
     }
+
     @Test
-    void search()  {
+    void search() {
         Member findMember = jpaQueryFactory
                 .selectFrom(member)
                 .where(member.username.eq("member1").and(member.age.eq(10)))
@@ -71,8 +72,9 @@ public class QuerydslBasicTest {
 
         assertThat(findMember.getUsername()).isEqualTo("member1");
     }
+
     @Test
-    void searchAndParam()  {
+    void searchAndParam() {
         Member findMember = jpaQueryFactory
                 .selectFrom(member)
                 .where(
@@ -85,12 +87,12 @@ public class QuerydslBasicTest {
     }
 
     @Test
-    void resultFetch()  {
+    void resultFetch() {
         QueryResults<Member> results = jpaQueryFactory
                 .selectFrom(member)
                 .fetchResults();
-        results.getTotal();
-        List<Member> results1 = results.getResults();
+        // results.getTotal();
+        //List<Member> results1 = results.getResults();
      /*   List<Member> fetch = jpaQueryFactory
                 .selectFrom(member)
                 .fetch();
@@ -101,10 +103,63 @@ public class QuerydslBasicTest {
         Member fetchFirst = jpaQueryFactory.selectFrom(member).fetchFirst();
 */
 
-        long total = jpaQueryFactory.selectFrom(member)
+      /*  long total = jpaQueryFactory.selectFrom(member)
                 .fetchCount();
         System.out.println("total = " + total);
+*/
 
+    }
 
+    /**
+     * 회원 정렬 순서
+     * 1. 회원 나이 내림차순
+     * 2. 회원 이름 올림차순
+     * 단, 2에서 회우너 이름이 없으면 마지막에 출력
+     */
+    @Test
+    void sort() {
+        em.persist(new Member(null, 100));
+        em.persist(new Member("member5", 100));
+        em.persist(new Member("member6", 100));
+
+        List<Member> result = jpaQueryFactory
+                .selectFrom(member)
+                .where(member.age.eq(100))
+                .orderBy(member.age.desc(), member.username.asc().nullsLast())
+                .fetch();
+
+        Member member5 = result.get(0);
+        Member member6 = result.get(1);
+        Member memberNull = result.get(2);
+        assertThat(member5.getUsername()).isEqualTo("member5");
+        assertThat(member6.getUsername()).isEqualTo("member6");
+        assertThat(memberNull.getUsername()).isNull();
+    }
+
+    @Test
+    void paging1() {
+        List<Member> result = jpaQueryFactory
+                .selectFrom(member)
+                .orderBy(member.username.desc())
+                .offset(1)
+                .limit(2)
+                .fetch();
+        for (Member member1 : result) {
+            System.out.println("member1 = " + member1);
+        }
+        assertThat(result.size()).isEqualTo(2);
+    }
+    @Test
+    void paging2() {
+        QueryResults<Member> result = jpaQueryFactory
+                .selectFrom(member)
+                .orderBy(member.username.desc())
+                .offset(1)
+                .limit(2)
+                .fetchResults();
+        assertThat(result.getTotal()).isEqualTo(4);
+        assertThat(result.getLimit()).isEqualTo(2);
+        assertThat(result.getOffset()).isEqualTo(1);
+        assertThat(result.getResults().size()).isEqualTo(2);
     }
 }
