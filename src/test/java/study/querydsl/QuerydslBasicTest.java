@@ -91,6 +91,7 @@ public class QuerydslBasicTest {
         QueryResults<Member> results = jpaQueryFactory
                 .selectFrom(member)
                 .fetchResults();
+
         // results.getTotal();
         //List<Member> results1 = results.getResults();
      /*   List<Member> fetch = jpaQueryFactory
@@ -162,4 +163,6 @@ public class QuerydslBasicTest {
         assertThat(result.getOffset()).isEqualTo(1);
         assertThat(result.getResults().size()).isEqualTo(2);
     }
+
+  
 }
