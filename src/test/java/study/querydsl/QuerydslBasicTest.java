@@ -7,14 +7,11 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 import study.querydsl.entity.Member;
-import study.querydsl.entity.QMember;
-import study.querydsl.entity.QTeam;
 import study.querydsl.entity.Team;
 
 import javax.persistence.EntityManager;
 import javax.persistence.PersistenceContext;
 import javax.transaction.Transactional;
-
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -116,9 +113,9 @@ public class QuerydslBasicTest {
 
     /**
      * 회원 정렬 순서
-     * 1. 회원 나이 내림차순
-     * 2. 회원 이름 올림차순
-     * 단, 2에서 회우너 이름이 없으면 마지막에 출력
+     * 1. 회원 나이 내림차순(desc)
+     * 2. 회원 이름 올림차순(asc)
+     * 단, 2에서 회원 이름이 없으면 마지막에 출력
      */
     @Test
     void sort() {
@@ -148,11 +145,10 @@ public class QuerydslBasicTest {
                 .offset(1)
                 .limit(2)
                 .fetch();
-        for (Member member1 : result) {
-            System.out.println("member1 = " + member1);
-        }
+
         assertThat(result.size()).isEqualTo(2);
     }
+
     @Test
     void paging2() {
         QueryResults<Member> result = jpaQueryFactory
@@ -166,8 +162,9 @@ public class QuerydslBasicTest {
         assertThat(result.getOffset()).isEqualTo(1);
         assertThat(result.getResults().size()).isEqualTo(2);
     }
+
     @Test
-    void aggregation()  {
+    void aggregation() {
         List<Tuple> result = jpaQueryFactory
                 .select(
                         member.count(),
@@ -188,9 +185,9 @@ public class QuerydslBasicTest {
 
     /**
      * 팀의 이름과 각 팀의 평균 연령을 구해라
-     * */
+     */
     @Test
-    void group()  {
+    void group() {
         List<Tuple> result = jpaQueryFactory
                 .select(team.name, member.age.avg())
                 .from(member)
@@ -213,5 +210,76 @@ public class QuerydslBasicTest {
 
     }
 
-  
+    /***
+     * 팀 A에 소속된 모든회원
+     */
+    @Test
+    void join() {
+        List<Member> result = jpaQueryFactory
+                .selectFrom(member)
+                .join(member.team, team)
+                .where(team.name.eq("teamA"))
+                .fetch();
+        assertThat(result)
+                .extracting("username")
+                .containsExactly("member1", "member2");
+    }
+
+    /***
+     * 세타 조인
+     * 회원의 이름이 팀 이름과 같은 회원 조회
+     */
+    @Test
+    void theta_join() {
+        em.persist(new Member("teamA"));
+        em.persist(new Member("teamB"));
+        em.persist(new Member("teamC"));
+
+        List<Member> result = jpaQueryFactory
+                .select(member)
+                .from(member, team)
+                .where(member.username.eq(team.name)).fetch();
+
+        assertThat(result)
+                .extracting("username")
+                .containsExactly("teamA", "teamB");
+    }
+    /**
+     * 예) 회원과 팀을 조인하면서, 팀 이름이 teamA인 팀만 조인, 회원은 모두 조회
+     * jpql : select m, t from Member m left join m.team t on t.name = 'teamA'
+     */
+    @Test
+    void join_on_filtering() {
+        List<Tuple> result = jpaQueryFactory
+                .select(member, team)
+                .from(member)
+                .leftJoin(member.team, team).on(team.name.eq("teamA")).fetch();
+        for (Tuple tuple : result) {
+            System.out.println("tuple = " + tuple);
+        }
+    }
+
+    /***
+     * 연관관계가 없는 엔티티 외부조인
+     * 회원의 이름이 팀 이름과 같은 대상 외부 조인
+     */
+    @Test
+    void join_on_no_relation() {
+        em.persist(new Member("teamA"));
+        em.persist(new Member("teamB"));
+        em.persist(new Member("teamC"));
+
+        List<Tuple> result = jpaQueryFactory
+                .select(member,team)
+                .from(member)
+                .leftJoin(team).on(member.username.eq(team.name)).fetch();
+
+        for (Tuple tuple : result) {
+            System.out.println("tuple = " + tuple);
+        }
+
+
+    }
+
+
 }
