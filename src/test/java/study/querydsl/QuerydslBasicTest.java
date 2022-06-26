@@ -7,14 +7,18 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 import study.querydsl.entity.Member;
+import study.querydsl.entity.QMember;
 import study.querydsl.entity.Team;
 
 import javax.persistence.EntityManager;
+import javax.persistence.EntityManagerFactory;
 import javax.persistence.PersistenceContext;
+import javax.persistence.PersistenceUnit;
 import javax.transaction.Transactional;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static study.querydsl.entity.QMember.*;
 import static study.querydsl.entity.QMember.member;
 import static study.querydsl.entity.QTeam.team;
 
@@ -279,6 +283,31 @@ public class QuerydslBasicTest {
         }
 
 
+    }
+    @PersistenceUnit //
+    EntityManagerFactory emf;
+    @Test
+    void fetchJoinNo()  {
+        em.flush();
+        em.clear();
+        Member member = jpaQueryFactory
+                .selectFrom(QMember.member)
+                .where(QMember.member.username.eq("member1"))
+                .fetchOne();
+        boolean loaded = emf.getPersistenceUnitUtil().isLoaded(member.getTeam());
+        assertThat(loaded).as("패치 조인 미적용").isFalse();
+    }
+    @Test
+    void fetchJoinUse()  {
+        em.flush();
+        em.clear();
+        Member member = jpaQueryFactory
+                .selectFrom(QMember.member)
+                .join(QMember.member.team, team).fetchJoin()
+                .where(QMember.member.username.eq("member1"))
+                .fetchOne();
+        boolean loaded = emf.getPersistenceUnitUtil().isLoaded(member.getTeam());
+        assertThat(loaded).as("패치 조인 적용").isTrue();
     }
 
 
